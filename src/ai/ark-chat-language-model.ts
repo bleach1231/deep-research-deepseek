@@ -23,23 +23,43 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
   async doGenerate(options: LanguageModelV1CallOptions) {
     const { messages, ...rest } = createCallSettings(options);
     
+    const requestPayload = {
+      model: this.modelId,
+      messages,
+      max_tokens: this.options.maxOutputTokens,
+      temperature: rest.temperature ?? 0.7,
+      top_p: rest.top_p ?? 1,
+      frequency_penalty: rest.frequency_penalty ?? 0,
+      presence_penalty: rest.presence_penalty ?? 0,
+      stop: rest.stop,
+    };
+    
+    console.log('Sending request to Ark API:', {
+      url: `${this.options.baseURL}/chat/completions`,
+      headers: this.options.headers(),
+      body: requestPayload,
+    });
+
     const response = await fetch(`${this.options.baseURL}/chat/completions`, {
       method: 'POST',
       headers: this.options.headers(),
-      body: JSON.stringify({
-        model: this.modelId,
-        messages,
-        max_tokens: this.options.maxOutputTokens,
-        ...rest,
-      }),
+      body: JSON.stringify(requestPayload),
       signal: options.abortSignal,
     });
 
+    const responseBody = await response.text();
+    
+    console.log('Received response from Ark API:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: responseBody,
+    });
+
     if (!response.ok) {
-      throw new Error(`Ark API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Ark API error: ${response.status} ${response.statusText}\n${responseBody}`);
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseBody);
     return {
       text: data.choices[0].message.content,
       usage: {
@@ -52,21 +72,40 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
   async doStream(options: LanguageModelV1CallOptions): Promise<AsyncIterable<LanguageModelV1StreamPart>> {
     const { messages, ...rest } = createCallSettings(options);
     
+    const requestPayload = {
+      model: this.modelId,
+      messages,
+      max_tokens: this.options.maxOutputTokens,
+      temperature: rest.temperature ?? 0.7,
+      top_p: rest.top_p ?? 1,
+      frequency_penalty: rest.frequency_penalty ?? 0,
+      presence_penalty: rest.presence_penalty ?? 0,
+      stop: rest.stop,
+      stream: true,
+    };
+    
+    console.log('Sending request to Ark API:', {
+      url: `${this.options.baseURL}/chat/completions`,
+      headers: this.options.headers(),
+      body: requestPayload,
+    });
+
     const response = await fetch(`${this.options.baseURL}/chat/completions`, {
       method: 'POST',
       headers: this.options.headers(),
-      body: JSON.stringify({
-        model: this.modelId,
-        messages,
-        max_tokens: this.options.maxOutputTokens,
-        ...rest,
-        stream: true,
-      }),
+      body: JSON.stringify(requestPayload),
       signal: options.abortSignal,
     });
 
+    console.log('Received response headers from Ark API:', {
+      status: response.status,
+      statusText: response.statusText,
+    });
+
     if (!response.ok) {
-      throw new Error(`Ark API error: ${response.status} ${response.statusText}`);
+      const errorBody = await response.text();
+      console.log('Received error response body:', errorBody);
+      throw new Error(`Ark API error: ${response.status} ${response.statusText}\n${errorBody}`);
     }
 
     if (!response.body) {
