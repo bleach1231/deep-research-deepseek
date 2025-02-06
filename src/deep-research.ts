@@ -1,10 +1,10 @@
 import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
 import { z } from 'zod';
 
-import { o3MiniModel, trimPrompt } from './ai/providers';
+import { model, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
 
 type ResearchResult = {
@@ -34,8 +34,9 @@ async function generateSerpQueries({
   // optional, if provided, the research will continue from the last learning
   learnings?: string[];
 }) {
-  const res = await generateObject({
-    model: o3MiniModel,
+  const res = await ({
+    model: model,
+    output: 'no-schema',
     system: systemPrompt(),
     prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${
       learnings
@@ -43,25 +44,33 @@ async function generateSerpQueries({
             '\n',
           )}`
         : ''
+    }
+    EXAMPLE JSON OUTPUT: 
+    {
+      "queries": [
+        {
+          "query": "A SERP query", 
+          "researchGoal", "First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.",
+        },
+      ]
     }`,
-    schema: z.object({
-      queries: z
-        .array(
-          z.object({
-            query: z.string().describe('The SERP query'),
-            researchGoal: z
-              .string()
-              .describe(
-                'First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.',
-              ),
-          }),
-        )
-        .describe(`List of SERP queries, max of ${numQueries}`),
-    }),
+    // schema: z.object({
+    //   queries: z
+    //     .array(
+    //       z.object({
+    //         query: z.string().describe('The SERP query'),
+    //         researchGoal: z
+    //           .string()
+    //           .describe(
+    //             'First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.',
+    //           ),
+    //       }),
+    //     )
+    //     .describe(`List of SERP queries, max of ${numQueries}`),
+    // }),
   });
   console.log(
-    `Created ${res.object.queries.length} queries`,
-    res.object.queries,
+    `Created queries: ${res.object}`,
   );
 
   return res.object.queries.slice(0, numQueries);
@@ -84,7 +93,8 @@ async function processSerpResult({
   console.log(`Ran ${query}, found ${contents.length} contents`);
 
   const res = await generateObject({
-    model: o3MiniModel,
+    model: model,
+    output: 'no-schema',
     abortSignal: AbortSignal.timeout(60_000),
     system: systemPrompt(),
     prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and infromation dense as possible. Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.\n\n<contents>${contents
@@ -125,20 +135,21 @@ export async function writeFinalReport({
     150_000,
   );
 
-  const res = await generateObject({
-    model: o3MiniModel,
+  const res = await generateText({
+    model: model,
+    // output: 'no-schema',
     system: systemPrompt(),
-    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
-    schema: z.object({
-      reportMarkdown: z
-        .string()
-        .describe('Final report on the topic in Markdown'),
-    }),
+    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>. Use markdown format.`,
+    // schema: z.object({
+    //   reportMarkdown: z
+    //     .string()
+    //     .describe('Final report on the topic in Markdown'),
+    // }),
   });
 
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
-  return res.object.reportMarkdown + urlsSection;
+  return res + urlsSection;
 }
 
 export async function deepResearch({
@@ -151,6 +162,7 @@ export async function deepResearch({
   query: string;
   breadth: number;
   depth: number;
+  useR1: boolean;
   learnings?: string[];
   visitedUrls?: string[];
 }): Promise<ResearchResult> {
