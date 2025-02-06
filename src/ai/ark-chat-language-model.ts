@@ -5,6 +5,7 @@ import { createCallSettings } from './call-settings';
 export class ArkChatLanguageModel implements LanguageModelV1 {
   readonly specificationVersion = 'v1';
   readonly provider = 'ark';
+  readonly defaultObjectGenerationMode = 'json';
   
   constructor(
     readonly modelId: string,
