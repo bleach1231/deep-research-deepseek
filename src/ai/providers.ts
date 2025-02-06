@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { createProvider, type Provider } from '@ai-sdk/provider';
+import { createProvider } from '@ai-sdk/provider';
 import { getEncoding } from 'js-tiktoken';
 
 import { RecursiveCharacterTextSplitter } from './text-splitter';
@@ -13,8 +13,8 @@ export interface ArkProviderOptions {
   maxOutputTokens?: number;
 }
 
-export function createArk(options: ArkProviderOptions): Provider {
-  return createProvider({
+export function createArk(options: ArkProviderOptions) {
+  return {
     id: 'ark',
     baseURL: options.baseURL || 'https://ark.cn-beijing.volces.com/api/v3',
     headers: {
@@ -25,7 +25,7 @@ export function createArk(options: ArkProviderOptions): Provider {
       maxInputTokens: options.maxInputTokens || 4096,
       maxOutputTokens: options.maxOutputTokens || 2048,
     },
-  });
+  };
 }
 
 // Providers
