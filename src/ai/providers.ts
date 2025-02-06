@@ -34,6 +34,13 @@ const openai = createOpenAI({
   apiKey: process.env.OPENAI_KEY!,
 });
 
+const ark = createArk({
+  apiKey: process.env.DEEPSEEK_API_KEY!,
+  baseURL: process.env.DEEPSEEK_BASE_URL!,
+  maxInputTokens: 32000,
+  maxOutputTokens: 32000,
+});
+
 // Models
 
 export const gpt4Model = openai('gpt-4o', {
@@ -46,6 +53,8 @@ export const o3MiniModel = openai('o3-mini', {
   reasoningEffort: 'medium',
   structuredOutputs: true,
 });
+
+export const r1Model = ark(process.env.DEEPSEEK_MODEL_R1!);
 
 const MinChunkSize = 140;
 const encoder = getEncoding('o200k_base');
