@@ -14,7 +14,7 @@ export interface ArkProviderOptions {
 }
 
 export function createArk(options: ArkProviderOptions) {
-  return {
+  return createProvider({
     id: 'ark',
     baseURL: options.baseURL || 'https://ark.cn-beijing.volces.com/api/v3',
     headers: {
@@ -25,7 +25,7 @@ export function createArk(options: ArkProviderOptions) {
       maxInputTokens: options.maxInputTokens || 4096,
       maxOutputTokens: options.maxOutputTokens || 2048,
     },
-  };
+  });
 }
 
 // Providers
