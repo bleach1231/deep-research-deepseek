@@ -1,32 +1,8 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { createProvider } from '@ai-sdk/provider';
 import { getEncoding } from 'js-tiktoken';
+import { arkProvider } from './ark-provider';
 
 import { RecursiveCharacterTextSplitter } from './text-splitter';
-
-// Ark Provider
-export interface ArkProviderOptions {
-  apiKey: string;
-  baseURL?: string;
-  defaultModel?: string;
-  maxInputTokens?: number;
-  maxOutputTokens?: number;
-}
-
-export function createArk(options: ArkProviderOptions) {
-  return createProvider({
-    id: 'ark',
-    baseURL: options.baseURL || 'https://ark.cn-beijing.volces.com/api/v3',
-    headers: {
-      Authorization: `Bearer ${options.apiKey}`,
-    },
-    config: {
-      defaultModel: options.defaultModel || 'ark-default',
-      maxInputTokens: options.maxInputTokens || 4096,
-      maxOutputTokens: options.maxOutputTokens || 2048,
-    },
-  });
-}
 
 // Providers
 
@@ -34,9 +10,9 @@ const openai = createOpenAI({
   apiKey: process.env.OPENAI_KEY!,
 });
 
-const ark = createArk({
-  apiKey: process.env.DEEPSEEK_API_KEY!,
-  baseURL: process.env.DEEPSEEK_BASE_URL!,
+const ark = arkProvider({
+  apiKey: process.env.ARK_API_KEY!,
+  baseURL: process.env.ARK_BASE_URL,
   maxInputTokens: 32000,
   maxOutputTokens: 32000,
 });
@@ -54,7 +30,7 @@ export const o3MiniModel = openai('o3-mini', {
   structuredOutputs: true,
 });
 
-export const r1Model = ark(process.env.DEEPSEEK_MODEL_R1!);
+export const r1Model = ark(process.env.ARK_MODEL_R1!);
 
 const MinChunkSize = 140;
 const encoder = getEncoding('o200k_base');
