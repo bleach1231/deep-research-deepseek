@@ -32,7 +32,22 @@ export async function generateFeedback({
     //     ),
     // }),
   });
-  console.log("Feedback questions: ", userFeedback.object);
+  // Type check the response object
+  if (typeof userFeedback.object !== 'object' || userFeedback.object === null) {
+    throw new Error('Invalid response format from AI model');
+  }
 
-  return userFeedback.object.questions.slice(0, numQuestions);
+  const response = userFeedback.object as { questions?: unknown };
+  
+  // Validate questions array
+  if (!Array.isArray(response.questions)) {
+    throw new Error('Invalid questions format in AI response');
+  }
+
+  // Ensure all questions are strings
+  const questions = response.questions.filter((q): q is string => typeof q === 'string');
+  
+  console.log("Feedback questions: ", questions);
+
+  return questions.slice(0, numQuestions);
 }
