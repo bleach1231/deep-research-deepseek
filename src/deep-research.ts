@@ -34,7 +34,7 @@ async function generateSerpQueries({
   // optional, if provided, the research will continue from the last learning
   learnings?: string[];
 }) {
-  const res = await ({
+  const res = await generateObject({
     model: model,
     output: 'no-schema',
     system: systemPrompt(),
@@ -50,30 +50,37 @@ async function generateSerpQueries({
       "queries": [
         {
           "query": "A SERP query", 
-          "researchGoal", "First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.",
+          "researchGoal": "First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.",
         },
       ]
     }`,
-    // schema: z.object({
-    //   queries: z
-    //     .array(
-    //       z.object({
-    //         query: z.string().describe('The SERP query'),
-    //         researchGoal: z
-    //           .string()
-    //           .describe(
-    //             'First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.',
-    //           ),
-    //       }),
-    //     )
-    //     .describe(`List of SERP queries, max of ${numQueries}`),
-    // }),
   });
-  console.log(
-    `Created queries: ${res.object}`,
-  );
 
-  return res.object.queries.slice(0, numQueries);
+  // Type check the response object
+  if (typeof res.object !== 'object' || res.object === null) {
+    throw new Error('Invalid response format from AI model');
+  }
+
+  const response = res.object as { queries?: unknown };
+  
+  // Validate queries array
+  if (!Array.isArray(response.queries)) {
+    throw new Error('Invalid queries format in AI response');
+  }
+
+  // Ensure all queries have the correct structure
+  const validQueries = response.queries.filter((q): q is { query: string, researchGoal: string } => 
+    typeof q === 'object' && 
+    q !== null &&
+    'query' in q && 
+    typeof q.query === 'string' &&
+    'researchGoal' in q &&
+    typeof q.researchGoal === 'string'
+  );
+  
+  console.log("Generated SERP queries: ", validQueries);
+
+  return validQueries.slice(0, numQueries);
 }
 
 async function processSerpResult({
