@@ -1,4 +1,4 @@
-import { LanguageModelV1 } from '@ai-sdk/provider';
+import { LanguageModelV1, LanguageModelV1CallOptions } from '@ai-sdk/provider';
 import { createApiCall } from '@ai-sdk/provider-utils';
 import { ArkChatSettings } from './ark-chat-settings';
 
@@ -19,11 +19,7 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
     },
   ) {}
 
-  get defaultObjectGenerationMode() {
-    return 'json';
-  }
-
-  async doGenerate(prompt: LanguageModelV1.Prompt, options: LanguageModelV1.Options) {
+  async doGenerate(options: LanguageModelV1CallOptions) {
     return createApiCall({
       provider: this.options.provider,
       baseURL: this.options.baseURL,
@@ -47,7 +43,7 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
     });
   }
 
-  async doStream(prompt: LanguageModelV1.Prompt, options: LanguageModelV1.Options) {
+  async doStream(options: LanguageModelV1CallOptions) {
     return createApiCall({
       provider: this.options.provider,
       baseURL: this.options.baseURL,
