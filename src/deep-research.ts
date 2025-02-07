@@ -63,6 +63,11 @@ async function generateSerpQueries({
   return obj.queries.slice(0, numQueries);
 }
 
+type ProcessSerpResult = {
+  learnings: string[];
+  followUpQuestions: string[];
+};
+
 async function processSerpResult({
   query,
   result,
@@ -73,7 +78,7 @@ async function processSerpResult({
   result: SearchResponse;
   numLearnings?: number;
   numFollowUpQuestions?: number;
-}) {
+}): Promise<ProcessSerpResult> {
   const contents = compact(result.data.map(item => item.markdown)).map(
     content => trimPrompt(content, 25_000),
   );
@@ -104,13 +109,16 @@ EXAMPLE JSON OUTPUT:
     prompt: prompt,
   });
 
-  var obj = res.object as { learnings: string[], followUpQuestions: string[] };
+  const obj = res.object as { learnings: string[], followUpQuestions: string[] };
   console.log(
     `Created ${obj.learnings.length} learnings`,
     obj.learnings,
   );
 
-  return obj;
+  return {
+    learnings: obj.learnings.slice(0, numLearnings),
+    followUpQuestions: obj.followUpQuestions.slice(0, numFollowUpQuestions)
+  };
 }
 
 export async function writeFinalReport({
