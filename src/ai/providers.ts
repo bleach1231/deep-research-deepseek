@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { getEncoding } from 'js-tiktoken';
-import { arkProvider } from './ark-provider';
+import { arkProvider, createArkProvider } from './ark-provider';
 
 import { RecursiveCharacterTextSplitter } from './text-splitter';
 
@@ -10,12 +10,22 @@ const openai = createOpenAI({
   apiKey: process.env.OPENAI_KEY!,
 });
 
-const ark = arkProvider({
-  apiKey: process.env.ARK_API_KEY!,
-  baseURL: process.env.ARK_BASE_URL,
-  maxInputTokens: 32000,
-  maxOutputTokens: 32000,
-});
+// const ark = createArkProvider({
+//   apiKey: process.env.DEEPSEEK_API_KEY!,
+//   baseURL: process.env.DEEPSEEK_BASE_URL,
+//   maxInputTokens: 32000,
+//   maxOutputTokens: 8192,
+//   temperature: 0.7,
+// });
+
+// vanilla OpenAI provider
+// cannot use this as structuredOutputs uses json_schema, and DeepSeek only supports json_object
+// https://api-docs.deepseek.com/guides/json_mode
+
+const ark = createOpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY!,
+  baseURL: process.env.DEEPSEEK_API_BASE,
+})
 
 // Models
 
@@ -30,7 +40,12 @@ export const o3MiniModel = openai('o3-mini', {
   structuredOutputs: true,
 });
 
-export const r1Model = ark(process.env.ARK_MODEL_R1!);
+export const r1Model = ark(process.env.DEEPSEEK_MODEL_R1!, {
+  reasoningEffort: 'medium',
+  structuredOutputs: true,
+});
+
+export const model = r1Model;
 
 const MinChunkSize = 140;
 const encoder = getEncoding('o200k_base');

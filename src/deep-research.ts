@@ -45,7 +45,7 @@ async function generateSerpQueries({
           )}`
         : ''
     }
-    EXAMPLE JSON OUTPUT: 
+    Example JSON are shown below. Output just the JSON with no backticks or other text.
     {
       "queries": [
         {
@@ -56,11 +56,14 @@ async function generateSerpQueries({
     }`,
   });
 
-  var obj = res.object as { queries: { query: string, researchGoal: string }[] };
-  
-  console.log("Generated SERP queries: ", obj.queries);
-
-  return obj.queries.slice(0, numQueries);
+  try {
+    var obj = res.object as { queries: { query: string, researchGoal: string }[] };
+    console.log("Generated SERP queries: ", obj.queries);
+    return obj.queries.slice(0, numQueries);
+  }catch(e) {
+    console.error('Error generating SERP queries: ', e);
+    return [];
+  }
 }
 
 type ProcessSerpResult = {
@@ -90,7 +93,7 @@ to each other. The learnings should be concise and to the point, as detailed and
 possible. Make sure to include any entities like people, places, companies, products, things, etc in the 
 learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic 
 further. Also generate up to ${numFollowUpQuestions} follow-up questions. 
-EXAMPLE JSON OUTPUT: 
+Example JSON are shown below. Output just the JSON with no backticks or other text.
 {
   "learnings": ["a learning from the content"],
   "followUpQuestions": ["a follow up question"],
@@ -109,16 +112,24 @@ EXAMPLE JSON OUTPUT:
     prompt: prompt,
   });
 
-  const obj = res.object as { learnings: string[], followUpQuestions: string[] };
-  console.log(
-    `Created ${obj.learnings.length} learnings`,
-    obj.learnings,
-  );
+  try {
+    const obj = res.object as ProcessSerpResult;
+    console.log(
+      `Created ${obj.learnings.length} learnings`,
+      obj.learnings,
+    );
 
-  return {
-    learnings: obj.learnings.slice(0, numLearnings),
-    followUpQuestions: obj.followUpQuestions.slice(0, numFollowUpQuestions)
-  };
+    return {
+      learnings: obj.learnings.slice(0, numLearnings),
+      followUpQuestions: obj.followUpQuestions.slice(0, numFollowUpQuestions)
+    };
+  } catch (e) {
+    console.error('Error processing SERP result: ', e);
+    return {
+      learnings: [],
+      followUpQuestions: []
+    }
+  }
 }
 
 export async function writeFinalReport({
@@ -141,17 +152,24 @@ export async function writeFinalReport({
     model: model,
     // output: 'no-schema',
     system: systemPrompt(),
-    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>. Use markdown format.`,
-    // schema: z.object({
-    //   reportMarkdown: z
-    //     .string()
-    //     .describe('Final report on the topic in Markdown'),
-    // }),
+    prompt: `Given the following prompt from the user, write a final report on the topic 
+    using the learnings from research. Make it as as detailed as possible, aim for 3 or 
+    more pages, include ALL the learnings from research:
+    
+    <prompt>${prompt}</prompt>
+    
+    Here are all the learnings from previous research:
+
+    <learnings>
+    ${learningsString}
+    </learnings>.
+    
+    Use markdown format.`,
   });
 
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
-  return res + urlsSection;
+  return res.text + urlsSection;
 }
 
 export async function deepResearch({
@@ -167,11 +185,19 @@ export async function deepResearch({
   learnings?: string[];
   visitedUrls?: string[];
 }): Promise<ResearchResult> {
-  const serpQueries = await generateSerpQueries({
+  var serpQueries = await generateSerpQueries({
     query,
     learnings,
     numQueries: breadth,
   });
+  if (serpQueries.length === 0) {
+    console.log("Retrying...");
+    serpQueries = await generateSerpQueries({
+      query,
+      learnings,
+      numQueries: breadth,
+    });
+  }
   const limit = pLimit(ConcurrencyLimit);
 
   const results = await Promise.all(
@@ -189,11 +215,19 @@ export async function deepResearch({
           const newBreadth = Math.ceil(breadth / 2);
           const newDepth = depth - 1;
 
-          const newLearnings = await processSerpResult({
+          var newLearnings = await processSerpResult({
             query: serpQuery.query,
             result,
             numFollowUpQuestions: newBreadth,
           });
+          if (newLearnings.learnings.length === 0) {
+            console.log("Retrying...");
+            newLearnings = await processSerpResult({
+              query: serpQuery.query,
+              result,
+              numFollowUpQuestions: newBreadth,
+            });
+          }
           const allLearnings = [...learnings, ...newLearnings.learnings];
           const allUrls = [...visitedUrls, ...newUrls];
 

@@ -1,18 +1,7 @@
+import { LanguageModelV1 } from "@ai-sdk/provider";
 import { generateId, loadApiKey, withoutTrailingSlash } from '@ai-sdk/provider-utils';
 import { ArkChatLanguageModel } from './ark-chat-language-model';
 import { ArkChatSettings } from './ark-chat-settings';
-
-export interface ArkProvider {
-  (
-    modelId: string,
-    settings?: ArkChatSettings,
-  ): ArkChatLanguageModel;
-
-  chat(
-    modelId: string,
-    settings?: ArkChatSettings,
-  ): ArkChatLanguageModel;
-}
 
 export interface ArkProviderSettings {
   baseURL?: string;
@@ -20,6 +9,19 @@ export interface ArkProviderSettings {
   headers?: Record<string, string>;
   maxInputTokens?: number;
   maxOutputTokens?: number;
+  temperature?: number;
+}
+
+export interface ArkProvider {
+  (
+    modelId: string,
+    settings?: ArkChatSettings,
+  ): LanguageModelV1;
+
+  chat(
+    modelId: string,
+    settings?: ArkChatSettings,
+  ): LanguageModelV1;
 }
 
 export function createArkProvider(options: ArkProviderSettings = {}): ArkProvider {
@@ -32,12 +34,12 @@ export function createArkProvider(options: ArkProviderSettings = {}): ArkProvide
     headers: () => ({
       Authorization: `Bearer ${loadApiKey({
         apiKey: options.apiKey,
-        environmentVariableName: 'ARK_API_KEY',
+        environmentVariableName: 'DEEPSEEK_API_KEY',
         description: 'Ark Provider',
       })}`,
       ...options.headers,
     }),
-    generateId: options.generateId ?? generateId,
+    generateId: generateId,
     maxInputTokens: options.maxInputTokens,
     maxOutputTokens: options.maxOutputTokens,
   });
@@ -49,7 +51,6 @@ export function createArkProvider(options: ArkProviderSettings = {}): ArkProvide
     if (new.target) {
       throw new Error('The model factory function cannot be called with the new keyword.');
     }
-
     return createModel(modelId, settings);
   };
 

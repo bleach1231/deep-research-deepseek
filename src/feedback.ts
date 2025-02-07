@@ -24,30 +24,10 @@ export async function generateFeedback({
       ]
     }
     `,
-    // schema: z.object({
-    //   questions: z
-    //     .array(z.string())
-    //     .describe(
-    //       `Follow up questions to clarify the research direction, max of ${numQuestions}`,
-    //     ),
-    // }),
   });
-  // Type check the response object
-  if (typeof userFeedback.object !== 'object' || userFeedback.object === null) {
-    throw new Error('Invalid response format from AI model');
-  }
-
-  const response = userFeedback.object as { questions?: unknown };
+  var obj = userFeedback.object as { questions: string[] };
   
-  // Validate questions array
-  if (!Array.isArray(response.questions)) {
-    throw new Error('Invalid questions format in AI response');
-  }
+  console.log("Feedback questions: ", obj.questions);
 
-  // Ensure all questions are strings
-  const questions = response.questions.filter((q): q is string => typeof q === 'string');
-  
-  console.log("Feedback questions: ", questions);
-
-  return questions.slice(0, numQuestions);
+  return obj.questions.slice(0, numQuestions);
 }

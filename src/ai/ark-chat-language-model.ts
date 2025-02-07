@@ -17,6 +17,7 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
       generateId: () => string;
       maxInputTokens?: number;
       maxOutputTokens?: number;
+      temperature?: number;
     },
   ) {}
 
@@ -27,7 +28,7 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
       model: this.modelId,
       messages,
       max_tokens: this.options.maxOutputTokens,
-      temperature: rest.temperature ?? 0.7,
+      temperature: /*rest.temperature ??*/ 0.7,
       top_p: rest.top_p ?? 1,
       frequency_penalty: rest.frequency_penalty ?? 0,
       presence_penalty: rest.presence_penalty ?? 0,
@@ -76,7 +77,7 @@ export class ArkChatLanguageModel implements LanguageModelV1 {
       model: this.modelId,
       messages,
       max_tokens: this.options.maxOutputTokens,
-      temperature: rest.temperature ?? 0.7,
+      temperature: /*rest.temperature ??*/ 0.7,
       top_p: rest.top_p ?? 1,
       frequency_penalty: rest.frequency_penalty ?? 0,
       presence_penalty: rest.presence_penalty ?? 0,
