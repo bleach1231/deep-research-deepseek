@@ -56,31 +56,11 @@ async function generateSerpQueries({
     }`,
   });
 
-  // Type check the response object
-  if (typeof res.object !== 'object' || res.object === null) {
-    throw new Error('Invalid response format from AI model');
-  }
-
-  const response = res.object as { queries?: unknown };
+  var obj = res.object as { queries: { query: string, researchGoal: string }[] };
   
-  // Validate queries array
-  if (!Array.isArray(response.queries)) {
-    throw new Error('Invalid queries format in AI response');
-  }
+  console.log("Generated SERP queries: ", obj.queries);
 
-  // Ensure all queries have the correct structure
-  const validQueries = response.queries.filter((q): q is { query: string, researchGoal: string } => 
-    typeof q === 'object' && 
-    q !== null &&
-    'query' in q && 
-    typeof q.query === 'string' &&
-    'researchGoal' in q &&
-    typeof q.researchGoal === 'string'
-  );
-  
-  console.log("Generated SERP queries: ", validQueries);
-
-  return validQueries.slice(0, numQueries);
+  return obj.queries.slice(0, numQueries);
 }
 
 async function processSerpResult({
@@ -98,32 +78,39 @@ async function processSerpResult({
     content => trimPrompt(content, 25_000),
   );
   console.log(`Ran ${query}, found ${contents.length} contents`);
+  var prompt = `Given the following contents from a SERP search for the query <query>${query}</query>, generate a 
+list of learnings (max of ${numLearnings}) from the contents. Return a maximum of ${numLearnings} learnings, 
+but feel free to return less if the contents are clear. Make sure each learning is unique and not similar 
+to each other. The learnings should be concise and to the point, as detailed and infromation dense as 
+possible. Make sure to include any entities like people, places, companies, products, things, etc in the 
+learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic 
+further. Also generate up to ${numFollowUpQuestions} follow-up questions. 
+EXAMPLE JSON OUTPUT: 
+{
+  "learnings": ["a learning from the content"],
+  "followUpQuestions": ["a follow up question"],
+}
+<contents>${contents
+      .map(content => `<content>\n${content}\n</content>`)
+      .join('\n')}</contents>`;
+;
+  console.log("Total prompt length: ", prompt.length);
 
   const res = await generateObject({
     model: model,
     output: 'no-schema',
-    abortSignal: AbortSignal.timeout(60_000),
+    // abortSignal: AbortSignal.timeout(60_000),
     system: systemPrompt(),
-    prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and infromation dense as possible. Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.\n\n<contents>${contents
-      .map(content => `<content>\n${content}\n</content>`)
-      .join('\n')}</contents>`,
-    schema: z.object({
-      learnings: z
-        .array(z.string())
-        .describe(`List of learnings, max of ${numLearnings}`),
-      followUpQuestions: z
-        .array(z.string())
-        .describe(
-          `List of follow-up questions to research the topic further, max of ${numFollowUpQuestions}`,
-        ),
-    }),
+    prompt: prompt,
   });
+
+  var obj = res.object as { learnings: string[], followUpQuestions: string[] };
   console.log(
-    `Created ${res.object.learnings.length} learnings`,
-    res.object.learnings,
+    `Created ${obj.learnings.length} learnings`,
+    obj.learnings,
   );
 
-  return res.object;
+  return obj;
 }
 
 export async function writeFinalReport({
@@ -169,7 +156,6 @@ export async function deepResearch({
   query: string;
   breadth: number;
   depth: number;
-  useR1: boolean;
   learnings?: string[];
   visitedUrls?: string[];
 }): Promise<ResearchResult> {
