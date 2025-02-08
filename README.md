@@ -1,3 +1,15 @@
+# Open Deep Research with DeepSeek
+
+这是[dzhng/deep-research](dzhng/deep-research)的DeepSeek中文化版本，一款由人工智能驱动的研究助手，它通过结合搜索引擎、网络抓取和大型语言模型，对任何主题进行迭代式、深入的研究。
+
+和原项目相比，主要就是两个修改，一个是将模型由o3-mini改成deepseek（爬虫依然依赖firecrawl），二是将prompts全部改成中文，这样对于中文的查询更加友好。
+
+Feng Zhou
+
+-----
+
+原作者David Zhang的README:
+
 # Open Deep Research
 
 An AI-powered research assistant that performs iterative, deep research on any topic by combining search engines, web scraping, and large language models. If you like this project, please consider starring it and giving me a follow on [X](https://x.com/dzhng).
