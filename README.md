@@ -15,6 +15,8 @@ export FIRECRAWL_KEY=fc-xxx        (Firecrawl API key)
 npm start
 ```
 
+[输出结果例子](report.md)。
+
 Feng Zhou
 
 -----
